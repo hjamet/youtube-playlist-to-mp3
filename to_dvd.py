@@ -3,6 +3,7 @@ import sys
 import argparse
 import shutil
 import yt_dlp
+from tqdm import tqdm
 
 from src.ffmpeg_utils import get_ffmpeg_path
 from src.audio_normalize import normalize_all_mp3_files, validate_audio_duration
