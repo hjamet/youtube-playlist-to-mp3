@@ -5,7 +5,7 @@ import shutil
 import yt_dlp
 
 from src.ffmpeg_utils import get_ffmpeg_path
-from src.audio_normalize import normalize_all_mp3_files
+from src.audio_normalize import normalize_all_mp3_files, validate_audio_duration
 
 
 def download_playlist_as_mp3(
@@ -37,6 +37,10 @@ def download_playlist_as_mp3(
         os.makedirs(output_dir)
         print(f"Created output directory: {output_dir}")
 
+    # Detect if URL is a single video (contains v= parameter) or a playlist
+    # If URL contains v=, force single video download even if list= is present
+    is_single_video = "v=" in playlist_url
+
     # Configuration for yt-dlp
     # Format selector: prefer non-HLS audio formats, but fallback to HLS if needed
     format_selector = "bestaudio[ext!=m3u8][protocol!=m3u8_native]/bestaudio[ext!=m3u8]/bestaudio/best[ext!=m3u8][protocol!=m3u8_native]/best"
@@ -64,7 +68,7 @@ def download_playlist_as_mp3(
         "quiet": False,
         "no_warnings": False,
         "ignoreerrors": False,  # Fail-fast: stop on errors
-        "noplaylist": False,  # Process the playlist
+        "noplaylist": is_single_video,  # If single video URL, don't download playlist
         "extract_flat": False,  # Extract all videos in the playlist
         "writethumbnail": False,
         "writeinfojson": False,
@@ -91,6 +95,9 @@ def download_playlist_as_mp3(
     # Normalize audio volume if requested
     if normalize:
         normalize_all_mp3_files(output_dir, ffmpeg_path)
+
+    # Validate that all files are under 79 minutes
+    validate_audio_duration(output_dir, ffmpeg_path, max_duration_minutes=79)
 
 
 if __name__ == "__main__":
