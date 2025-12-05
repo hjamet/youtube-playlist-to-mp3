@@ -5,9 +5,12 @@ import shutil
 import yt_dlp
 
 from src.ffmpeg_utils import get_ffmpeg_path
+from src.audio_normalize import normalize_all_mp3_files
 
 
-def download_playlist_as_mp3(playlist_url, bitrate="320", ffmpeg_path=None):
+def download_playlist_as_mp3(
+    playlist_url, bitrate="320", ffmpeg_path=None, normalize=True
+):
     """
     Download all videos from a YouTube playlist as MP3 files at specified bitrate.
 
@@ -15,13 +18,22 @@ def download_playlist_as_mp3(playlist_url, bitrate="320", ffmpeg_path=None):
         playlist_url (str): URL of the YouTube playlist
         bitrate (str): Audio bitrate in kbps, default is "320"
         ffmpeg_path (str): Path to ffmpeg executable (optional, will use PATH if not provided)
+        normalize (bool): Whether to normalize audio volume after download (default: True)
     """
     # Get the repository root directory (where the script is located)
     repo_root = os.path.dirname(os.path.abspath(__file__))
     output_dir = os.path.join(repo_root, "musique")
 
-    # Create output directory if it doesn't exist
-    if not os.path.exists(output_dir):
+    # Clean output directory: remove all existing files before downloading
+    if os.path.exists(output_dir):
+        for filename in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, filename)
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        print(f"Cleaned output directory: {output_dir}")
+    else:
         os.makedirs(output_dir)
         print(f"Created output directory: {output_dir}")
 
@@ -59,24 +71,8 @@ def download_playlist_as_mp3(playlist_url, bitrate="320", ffmpeg_path=None):
         "writedescription": False,
         # Specify ffmpeg location for postprocessors
         "ffmpeg_location": ffmpeg_location,
-        # Force use of ffmpeg for HLS downloads instead of hlsnative (avoids 403 errors)
+        # Use native HLS downloader (more reliable than external ffmpeg for HLS)
         "hls_use_mpegts": True,  # Use MPEG-TS container for HLS (better compatibility)
-        "hls_prefer_native": False,  # Disable native HLS downloader, use ffmpeg instead
-        "external_downloader": (
-            ffmpeg_path
-            if ffmpeg_path and ffmpeg_path != shutil.which("ffmpeg")
-            else "ffmpeg"
-        ),
-        "external_downloader_args": {
-            "ffmpeg": [
-                "-loglevel",
-                "error",
-                "-http_persistent",
-                "false",
-                "-seekable",
-                "0",
-            ]
-        },
         # Retry on errors
         "retries": 10,
         "fragment_retries": 10,
@@ -92,6 +88,10 @@ def download_playlist_as_mp3(playlist_url, bitrate="320", ffmpeg_path=None):
 
     print("\nPlaylist download completed successfully!")
 
+    # Normalize audio volume if requested
+    if normalize:
+        normalize_all_mp3_files(output_dir, ffmpeg_path)
+
 
 if __name__ == "__main__":
     # Get ffmpeg path (downloads automatically if not found)
@@ -104,6 +104,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-b", "--bitrate", default="320", help="Audio bitrate in kbps (default: 320)"
     )
+    parser.add_argument(
+        "--no-normalize", action="store_true", help="Skip audio volume normalization"
+    )
 
     args = parser.parse_args()
-    download_playlist_as_mp3(args.playlist_url, args.bitrate, ffmpeg_path)
+    download_playlist_as_mp3(
+        args.playlist_url, args.bitrate, ffmpeg_path, normalize=not args.no_normalize
+    )
