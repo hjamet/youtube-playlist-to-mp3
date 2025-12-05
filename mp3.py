@@ -4,29 +4,17 @@ import argparse
 import shutil
 import yt_dlp
 
-
-def check_ffmpeg_available():
-    """
-    Check if ffmpeg is available in the system PATH.
-    Fail-fast if not available since it's required for audio conversion.
-    """
-    if shutil.which("ffmpeg") is None:
-        print("ERROR: ffmpeg is not installed or not in PATH.")
-        print("ffmpeg is required for audio conversion to MP3.")
-        print("\nInstallation instructions:")
-        print("  Ubuntu/Debian: sudo apt install ffmpeg")
-        print("  macOS: brew install ffmpeg")
-        print("  Windows: Download from https://ffmpeg.org/")
-        sys.exit(1)
+from src.ffmpeg_utils import get_ffmpeg_path
 
 
-def download_playlist_as_mp3(playlist_url, bitrate="320"):
+def download_playlist_as_mp3(playlist_url, bitrate="320", ffmpeg_path=None):
     """
     Download all videos from a YouTube playlist as MP3 files at specified bitrate.
 
     Args:
         playlist_url (str): URL of the YouTube playlist
         bitrate (str): Audio bitrate in kbps, default is "320"
+        ffmpeg_path (str): Path to ffmpeg executable (optional, will use PATH if not provided)
     """
     # Get the repository root directory (where the script is located)
     repo_root = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +28,15 @@ def download_playlist_as_mp3(playlist_url, bitrate="320"):
     # Configuration for yt-dlp
     # Format selector: prefer non-HLS audio formats, but fallback to HLS if needed
     format_selector = "bestaudio[ext!=m3u8][protocol!=m3u8_native]/bestaudio[ext!=m3u8]/bestaudio/best[ext!=m3u8][protocol!=m3u8_native]/best"
+
+    # Configure ffmpeg location for yt-dlp
+    # If using local binary, need to specify directory (not full path to binary)
+    if ffmpeg_path and ffmpeg_path != shutil.which("ffmpeg"):
+        # Extract directory from path
+        ffmpeg_dir = os.path.dirname(ffmpeg_path)
+        ffmpeg_location = ffmpeg_dir
+    else:
+        ffmpeg_location = None  # Use system PATH
 
     ydl_opts = {
         "format": format_selector,
@@ -60,10 +57,16 @@ def download_playlist_as_mp3(playlist_url, bitrate="320"):
         "writethumbnail": False,
         "writeinfojson": False,
         "writedescription": False,
+        # Specify ffmpeg location for postprocessors
+        "ffmpeg_location": ffmpeg_location,
         # Force use of ffmpeg for HLS downloads instead of hlsnative (avoids 403 errors)
         "hls_use_mpegts": True,  # Use MPEG-TS container for HLS (better compatibility)
         "hls_prefer_native": False,  # Disable native HLS downloader, use ffmpeg instead
-        "external_downloader": "ffmpeg",  # Use ffmpeg for all downloads including HLS
+        "external_downloader": (
+            ffmpeg_path
+            if ffmpeg_path and ffmpeg_path != shutil.which("ffmpeg")
+            else "ffmpeg"
+        ),
         "external_downloader_args": {
             "ffmpeg": [
                 "-loglevel",
@@ -91,8 +94,8 @@ def download_playlist_as_mp3(playlist_url, bitrate="320"):
 
 
 if __name__ == "__main__":
-    # Fail-fast: check ffmpeg availability before proceeding
-    check_ffmpeg_available()
+    # Get ffmpeg path (downloads automatically if not found)
+    ffmpeg_path = get_ffmpeg_path()
 
     parser = argparse.ArgumentParser(
         description="Download YouTube playlist videos as MP3s"
@@ -103,4 +106,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    download_playlist_as_mp3(args.playlist_url, args.bitrate)
+    download_playlist_as_mp3(args.playlist_url, args.bitrate, ffmpeg_path)
