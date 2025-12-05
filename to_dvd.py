@@ -55,6 +55,49 @@ def download_playlist_as_mp3(
     else:
         ffmpeg_location = None  # Use system PATH
 
+    # First, extract playlist info to get total number of videos
+    info_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "extract_flat": True,
+        "noplaylist": is_single_video,
+    }
+
+    with yt_dlp.YoutubeDL(info_opts) as ydl:
+        info = ydl.extract_info(playlist_url, download=False)
+        if "entries" in info:
+            total_videos = len([e for e in info["entries"] if e is not None])
+        else:
+            total_videos = 1
+
+    # Initialize progress bar
+    pbar = tqdm(
+        total=total_videos,
+        desc="Downloading",
+        unit="track",
+        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+    )
+
+    # Track downloaded videos to avoid counting duplicates
+    downloaded_files = set()
+
+    def progress_hook(d):
+        """
+        Progress hook to update the progress bar when a video download completes.
+        """
+        if d["status"] == "finished":
+            filename = d.get("filename", "")
+            # Only count once per file (avoid counting both download and post-processing)
+            if filename and filename not in downloaded_files:
+                downloaded_files.add(filename)
+                # Extract just the filename without path for cleaner display
+                display_name = os.path.basename(filename)
+                # Truncate if too long
+                if len(display_name) > 40:
+                    display_name = display_name[:37] + "..."
+                pbar.set_postfix_str(display_name)
+                pbar.update(1)
+
     ydl_opts = {
         "format": format_selector,
         "postprocessors": [
@@ -66,8 +109,8 @@ def download_playlist_as_mp3(
         ],
         "outtmpl": os.path.join(output_dir, "%(title)s.%(ext)s"),
         "verbose": False,
-        "quiet": False,
-        "no_warnings": False,
+        "quiet": True,  # Hide download logs
+        "no_warnings": True,  # Hide warnings
         "ignoreerrors": False,  # Fail-fast: stop on errors
         "noplaylist": is_single_video,  # If single video URL, don't download playlist
         "extract_flat": False,  # Extract all videos in the playlist
@@ -81,11 +124,16 @@ def download_playlist_as_mp3(
         # Retry on errors
         "retries": 10,
         "fragment_retries": 10,
+        # Progress hook
+        "progress_hooks": [progress_hook],
     }
 
     # Download the playlist
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         error_code = ydl.download([playlist_url])
+
+    # Close progress bar
+    pbar.close()
 
     if error_code != 0:
         print(f"\nERROR: Playlist download failed with error code: {error_code}")
