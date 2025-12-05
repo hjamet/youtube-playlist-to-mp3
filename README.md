@@ -6,7 +6,7 @@ A powerful Python script that downloads entire YouTube playlists and converts th
 
 - **🎵 Playlist Download**: Download entire YouTube playlists in one command
 - **🔊 High Quality Audio**: Supports up to 320 kbps MP3 quality
-- **📁 Custom Output**: Specify custom download directories
+- **📁 Fixed Output**: Downloads are saved to the `musique` directory at the repository root
 - **⚡ Batch Processing**: Processes all videos in a playlist automatically
 - **🛡️ Error Handling**: Skips problematic videos and continues downloading
 - **🎛️ Configurable Bitrate**: Choose your preferred audio quality
@@ -32,14 +32,11 @@ pip install yt-dlp
 ### Basic Usage
 
 ```bash
-# Download a playlist to default ./downloads directory
-python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID"
-
-# Download to a custom directory
-python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -o "./My_Music"
+# Download a playlist (saved to musique/ directory)
+python mp3.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID"
 
 # Download with custom bitrate
-python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -b 192
+python mp3.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -b 192
 ```
 
 ## 📋 Command Line Arguments
@@ -47,7 +44,6 @@ python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
 | Argument | Short | Description | Default | Required |
 |----------|-------|-------------|---------|----------|
 | `playlist_url` | - | YouTube playlist URL | - | ✅ Yes |
-| `--output` | `-o` | Output directory for MP3 files | `./downloads` | ❌ No |
 | `--bitrate` | `-b` | Audio bitrate in kbps | `320` | ❌ No |
 
 ## 🎵 Audio Quality Options
@@ -62,23 +58,13 @@ python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
 ## 📁 Output Structure
 
 ```
-your-directory/
-├── mp3_downloader.py
-└── downloads/                 # Default output directory
+repository-root/
+├── mp3.py
+├── README.md
+└── musique/                    # Output directory (created automatically)
     ├── Song Title 1.mp3
     ├── Song Title 2.mp3
     ├── Another Great Song.mp3
-    └── ...
-```
-
-Or with custom directory:
-
-```
-your-directory/
-├── mp3_downloader.py
-└── My_Music/                  # Custom output directory
-    ├── Song Title 1.mp3
-    ├── Song Title 2.mp3
     └── ...
 ```
 
@@ -86,22 +72,17 @@ your-directory/
 
 ### Example 1: Basic Download
 ```bash
-python mp3_downloader.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrO18tKrEJnXxwI9L_Bd11kU"
+python mp3.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrO18tKrEJnXxwI9L_Bd11kU"
 ```
 
-### Example 2: Custom Directory
+### Example 2: Lower Quality for Storage
 ```bash
-python mp3_downloader.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrOWSpFrbxDbY2WIMy17kHA-" -o "./Punjabi_Songs"
+python mp3.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -b 128
 ```
 
-### Example 3: Lower Quality for Storage
+### Example 3: High Quality Collection
 ```bash
-python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -o "./Podcasts" -b 128
-```
-
-### Example 4: High Quality Collection
-```bash
-python mp3_downloader.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -o "./Premium_Music" -b 320
+python mp3.py "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" -b 320
 ```
 
 ## 🔧 How It Works
@@ -135,20 +116,20 @@ ydl_opts = {
 ## 📊 Example Output
 
 ```bash
-$ python mp3_downloader.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrO18tKrEJnXxwI9L_Bd11kU" -o "./My_Playlist"
+$ python mp3.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrO18tKrEJnXxwI9L_Bd11kU"
 
-Created output directory: ./My_Playlist
+Created output directory: /path/to/repository/musique
 
 [youtube] Extracting playlist: PL1KFFrJTkUrO18tKrEJnXxwI9L_Bd11kU
 [youtube] Playlist: My Awesome Playlist
 [youtube] Downloading 25 videos
 
 [youtube] 1/25: Downloading video info
-[download] Destination: ./My_Playlist/Amazing Song Title.mp3
+[download] Destination: /path/to/repository/musique/Amazing Song Title.mp3
 [download] 100% of 4.2MiB in 00:02
 
 [youtube] 2/25: Downloading video info
-[download] Destination: ./My_Playlist/Another Great Track.mp3
+[download] Destination: /path/to/repository/musique/Another Great Track.mp3
 [download] 100% of 3.8MiB in 00:02
 
 ...
@@ -179,7 +160,7 @@ pip install yt-dlp
 - The script will automatically skip these and continue
 
 **Permission errors:**
-- Ensure you have write permissions to the output directory
+- Ensure you have write permissions to the repository directory
 - Try running with administrator/sudo privileges if needed
 
 ### Getting Playlist URLs
@@ -206,7 +187,7 @@ pip install yt-dlp
 
 ### Command Help
 ```bash
-python mp3_downloader.py --help
+python mp3.py --help
 ```
 
 ### Common Solutions
@@ -233,10 +214,12 @@ Create a batch file with multiple commands:
 
 ```bash
 #!/bin/bash
-python mp3_downloader.py "PLAYLIST_1" -o "./Rock_Music"
-python mp3_downloader.py "PLAYLIST_2" -o "./Pop_Music"
-python mp3_downloader.py "PLAYLIST_3" -o "./Classical"
+python mp3.py "PLAYLIST_1"
+python mp3.py "PLAYLIST_2"
+python mp3.py "PLAYLIST_3"
 ```
+
+All playlists will be downloaded to the `musique/` directory.
 
 ### Integration with Other Tools
 

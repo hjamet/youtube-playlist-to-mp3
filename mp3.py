@@ -2,15 +2,18 @@ import os
 import argparse
 import yt_dlp
 
-def download_playlist_as_mp3(playlist_url, output_dir="./downloads", bitrate="320"):
+def download_playlist_as_mp3(playlist_url, bitrate="320"):
     """
     Download all videos from a YouTube playlist as MP3 files at specified bitrate.
     
     Args:
         playlist_url (str): URL of the YouTube playlist
-        output_dir (str): Directory to save the MP3 files
         bitrate (str): Audio bitrate in kbps, default is "320"
     """
+    # Get the repository root directory (where the script is located)
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.join(repo_root, "musique")
+    
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -48,13 +51,8 @@ def download_playlist_as_mp3(playlist_url, output_dir="./downloads", bitrate="32
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download YouTube playlist videos as MP3s")
     parser.add_argument("playlist_url", help="URL of the YouTube playlist")
-    parser.add_argument("-o", "--output", default="./downloads", help="Output directory for MP3 files")
     parser.add_argument("-b", "--bitrate", default="320", help="Audio bitrate in kbps (default: 320)")
     
     args = parser.parse_args()
-    # playlist_url = https://www.youtube.com/playlist?list=PL1KFFrJTkUrOVqixTEfG9eDFir4gKlvmx
-    download_playlist_as_mp3(args.playlist_url, args.output, args.bitrate)
+    download_playlist_as_mp3(args.playlist_url, args.bitrate)
     
-    
-    # python mp3.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrO18tKrEJnXxwI9L_Bd11kU" -o "./Punjabi_S"
-    # python mp3.py "https://www.youtube.com/playlist?list=PL1KFFrJTkUrOWSpFrbxDbY2WIMy17kHA-" -o "./MusicN" --verbose
