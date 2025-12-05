@@ -19,7 +19,7 @@ def normalize_audio_volume(input_file, ffmpeg_path, target_lufs=-23.0):
         bool: True if normalization succeeded, False otherwise
     """
     if not os.path.exists(input_file):
-        print(f"ERROR: Input file not found: {input_file}")
+        print(f"❌ ERROR: Input file not found: {input_file}")
         sys.exit(1)
 
     # Create temporary file for output
@@ -49,7 +49,7 @@ def normalize_audio_volume(input_file, ffmpeg_path, target_lufs=-23.0):
     )
 
     if result.returncode != 0:
-        print(f"ERROR: Failed to normalize {os.path.basename(input_file)}")
+        print(f"❌ ERROR: Failed to normalize {os.path.basename(input_file)}")
         print(f"ffmpeg error: {result.stderr}")
         os.remove(temp_file)
         sys.exit(1)
@@ -68,8 +68,10 @@ def normalize_all_mp3_files(output_dir, ffmpeg_path, target_lufs=-23.0):
         ffmpeg_path (str): Path to ffmpeg executable
         target_lufs (float): Target integrated loudness in LUFS (default: -23.0)
     """
+    from tqdm import tqdm
+
     if not os.path.exists(output_dir):
-        print(f"ERROR: Output directory not found: {output_dir}")
+        print(f"❌ ERROR: Output directory not found: {output_dir}")
         sys.exit(1)
 
     # Find all MP3 files
@@ -80,18 +82,27 @@ def normalize_all_mp3_files(output_dir, ffmpeg_path, target_lufs=-23.0):
     ]
 
     if not mp3_files:
-        print("No MP3 files found to normalize.")
+        print("⚠️  No MP3 files found to normalize.")
         return
 
-    print(f"\nNormalizing volume for {len(mp3_files)} file(s)...")
-    print(f"Target loudness: {target_lufs} LUFS (EBU R128 standard)")
+    print(f"\n🔊 Normalizing volume for {len(mp3_files)} file(s)...")
+    print(f"🎚️  Target loudness: {target_lufs} LUFS (EBU R128 standard)")
 
-    for i, mp3_file in enumerate(mp3_files, 1):
-        filename = os.path.basename(mp3_file)
-        print(f"[{i}/{len(mp3_files)}] Normalizing: {filename}")
-        normalize_audio_volume(mp3_file, ffmpeg_path, target_lufs)
+    # Use progress bar for normalization
+    with tqdm(
+        total=len(mp3_files),
+        desc="🔊 Normalizing",
+        unit="file",
+        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+        ncols=100,
+    ) as pbar:
+        for mp3_file in mp3_files:
+            filename = os.path.basename(mp3_file)
+            pbar.set_postfix_str(filename[:40] if len(filename) <= 40 else filename[:37] + "...")
+            normalize_audio_volume(mp3_file, ffmpeg_path, target_lufs)
+            pbar.update(1)
 
-    print("\nVolume normalization completed successfully!")
+    print("\n✅ Volume normalization completed successfully!")
 
 
 def get_audio_duration(file_path, ffmpeg_path):
@@ -106,7 +117,7 @@ def get_audio_duration(file_path, ffmpeg_path):
         float: Duration in seconds
     """
     if not os.path.exists(file_path):
-        print(f"ERROR: File not found: {file_path}")
+        print(f"❌ ERROR: File not found: {file_path}")
         sys.exit(1)
 
     # Try ffprobe first (more accurate)
@@ -147,7 +158,7 @@ def get_audio_duration(file_path, ffmpeg_path):
     )
 
     if result.returncode != 0:
-        print(f"ERROR: Failed to get duration for {os.path.basename(file_path)}")
+        print(f"❌ ERROR: Failed to get duration for {os.path.basename(file_path)}")
         print(f"Error: {result.stderr}")
         sys.exit(1)
 
@@ -156,7 +167,7 @@ def get_audio_duration(file_path, ffmpeg_path):
         duration_str = result.stdout.strip()
         if not duration_str:
             print(
-                f"ERROR: Could not extract duration from {os.path.basename(file_path)}"
+                f"❌ ERROR: Could not extract duration from {os.path.basename(file_path)}"
             )
             sys.exit(1)
         return float(duration_str)
@@ -169,7 +180,7 @@ def get_audio_duration(file_path, ffmpeg_path):
                 parts = duration_str.split(":")
                 if len(parts) != 3:
                     print(
-                        f"ERROR: Could not parse duration from {os.path.basename(file_path)}"
+                        f"❌ ERROR: Could not parse duration from {os.path.basename(file_path)}"
                     )
                     sys.exit(1)
                 hours = float(parts[0])
@@ -177,7 +188,7 @@ def get_audio_duration(file_path, ffmpeg_path):
                 seconds = float(parts[2])
                 return hours * 3600 + minutes * 60 + seconds
 
-    print(f"ERROR: Could not extract duration from {os.path.basename(file_path)}")
+    print(f"❌ ERROR: Could not extract duration from {os.path.basename(file_path)}")
     sys.exit(1)
 
 
@@ -204,14 +215,17 @@ def format_duration(seconds):
 def validate_audio_duration(output_dir, ffmpeg_path, max_duration_minutes=79):
     """
     Validate that all MP3 files are shorter than the maximum duration.
+    Also calculates and displays the total duration of the playlist.
 
     Args:
         output_dir (str): Directory containing MP3 files
         ffmpeg_path (str): Path to ffmpeg executable
         max_duration_minutes (int): Maximum duration in minutes (default: 79)
     """
+    from tqdm import tqdm
+
     if not os.path.exists(output_dir):
-        print(f"ERROR: Output directory not found: {output_dir}")
+        print(f"❌ ERROR: Output directory not found: {output_dir}")
         sys.exit(1)
 
     # Find all MP3 files
@@ -222,22 +236,38 @@ def validate_audio_duration(output_dir, ffmpeg_path, max_duration_minutes=79):
     ]
 
     if not mp3_files:
-        print("No MP3 files found to validate.")
+        print("⚠️  No MP3 files found to validate.")
         return
 
     max_duration_seconds = max_duration_minutes * 60
     invalid_files = []
+    total_duration_seconds = 0.0
 
-    print(f"\nValidating duration for {len(mp3_files)} file(s)...")
-    print(f"Maximum allowed duration: {max_duration_minutes} minutes")
+    print(f"\n⏱️  Validating duration for {len(mp3_files)} file(s)...")
+    print(f"📏 Maximum allowed duration per file: {max_duration_minutes} minutes")
 
-    for mp3_file in mp3_files:
-        filename = os.path.basename(mp3_file)
-        duration = get_audio_duration(mp3_file, ffmpeg_path)
-        duration_minutes = duration / 60
+    # Use progress bar for validation
+    with tqdm(
+        total=len(mp3_files),
+        desc="⏱️  Validating",
+        unit="file",
+        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+        ncols=100,
+    ) as pbar:
+        for mp3_file in mp3_files:
+            filename = os.path.basename(mp3_file)
+            pbar.set_postfix_str(filename[:40] if len(filename) <= 40 else filename[:37] + "...")
+            duration = get_audio_duration(mp3_file, ffmpeg_path)
+            duration_minutes = duration / 60
+            total_duration_seconds += duration
 
-        if duration > max_duration_seconds:
-            invalid_files.append((filename, duration_minutes))
+            if duration > max_duration_seconds:
+                invalid_files.append((filename, duration_minutes))
+            pbar.update(1)
+
+    # Calculate total duration
+    total_duration_minutes = total_duration_seconds / 60
+    total_duration_hours = total_duration_minutes / 60
 
     if invalid_files:
         print(
@@ -249,4 +279,13 @@ def validate_audio_duration(output_dir, ffmpeg_path, max_duration_minutes=79):
             )
         sys.exit(1)
     else:
-        print(f"\n✅ All files are valid (all under {max_duration_minutes} minutes)")
+        print(f"\n✅ All files are valid (all under {max_duration_minutes} minutes per file)")
+        # Display total duration
+        if total_duration_hours >= 1:
+            print(
+                f"🎵 Total playlist duration: {total_duration_hours:.2f} hours ({format_duration(total_duration_seconds)})"
+            )
+        else:
+            print(
+                f"🎵 Total playlist duration: {total_duration_minutes:.2f} minutes ({format_duration(total_duration_seconds)})"
+            )

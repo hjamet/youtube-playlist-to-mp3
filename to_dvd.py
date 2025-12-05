@@ -33,10 +33,10 @@ def download_playlist_as_mp3(
                 os.remove(file_path)
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
-        print(f"Cleaned output directory: {output_dir}")
+        print(f"🧹 Cleaned output directory: {output_dir}")
     else:
         os.makedirs(output_dir)
-        print(f"Created output directory: {output_dir}")
+        print(f"📁 Created output directory: {output_dir}")
 
     # Detect if URL is a single video (contains v= parameter) or a playlist
     # If URL contains v=, force single video download even if list= is present
@@ -87,9 +87,10 @@ def download_playlist_as_mp3(
     # Initialize progress bar
     pbar = tqdm(
         total=total_videos,
-        desc="Downloading",
+        desc="⬇️  Downloading",
         unit="track",
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+        ncols=100,
     )
 
     # Track downloaded videos to avoid counting duplicates
@@ -150,16 +151,16 @@ def download_playlist_as_mp3(
     pbar.close()
 
     if error_code != 0:
-        print(f"\nERROR: Playlist download failed with error code: {error_code}")
+        print(f"\n❌ ERROR: Playlist download failed with error code: {error_code}")
         sys.exit(1)
 
-    print("\nPlaylist download completed successfully!")
+    print("\n✅ Playlist download completed successfully!")
 
     # Normalize audio volume if requested
     if normalize:
         normalize_all_mp3_files(output_dir, ffmpeg_path)
 
-    # Validate that all files are under 79 minutes
+    # Validate that all files are under 79 minutes and display total duration
     validate_audio_duration(output_dir, ffmpeg_path, max_duration_minutes=79)
 
 
