@@ -70,6 +70,12 @@ def download_playlist_as_mp3(
         else:
             total_videos = 1
 
+    # Determine number of digits needed for padding (e.g., 3 digits for up to 999 tracks)
+    # This ensures proper sorting in Windows Explorer
+    num_digits = len(str(total_videos)) if total_videos > 0 else 3
+    if num_digits < 3:
+        num_digits = 3  # Minimum 3 digits for consistent sorting
+
     # Initialize progress bar
     pbar = tqdm(
         total=total_videos,
@@ -107,7 +113,9 @@ def download_playlist_as_mp3(
                 "preferredquality": bitrate,
             }
         ],
-        "outtmpl": os.path.join(output_dir, "%(title)s.%(ext)s"),
+        "outtmpl": os.path.join(
+            output_dir, f"%{{playlist_index}}0{num_digits}d - %(title)s.%(ext)s"
+        ),
         "verbose": False,
         "quiet": True,  # Hide download logs
         "no_warnings": True,  # Hide warnings
